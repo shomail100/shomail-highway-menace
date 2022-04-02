@@ -56,6 +56,7 @@ y1 = -2500
 #score_value = 0
 cars_passed = 0
 score = 0
+points = 0
 
 #?Setting up a function, so that size of the font can differ
 def game_text(size):
@@ -158,6 +159,7 @@ def play():
     y2 =7
     avoid_car_speed = 0
     width, height = 1280, 720
+    opposition_instance = Opposition()
     game_screen = pygame.display.set_mode((width, height))
     score_value = 0
     
@@ -185,16 +187,16 @@ def play():
         
         y1 += 5
         y += 5
-
-        #show_score(50, 30)
         
         if not opposition_instance.alive():
             opposition_instance = Opposition()
-            
-        #if opposition_instance.rect.y >= (height-50):
-        #    score += 10
-        #    opposition_instance.kill()
-            
+         
+        for i, inst in enumerate(e):
+            if inst.rect.y >= (height - 50):
+                score += 10
+                inst.kill()
+                opposition_instance = Opposition()
+                e.add(opposition_instance)   
 
     
         score_Text = game_text(20).render("Score: " + str(score), True, "White")
@@ -284,9 +286,6 @@ score_value = 0
 def unpaused():
     global pause
     pause=False
-#def show_score(x, y):
-#    score = game_text(30).render("Score: " + str(score_value), True, "White")
-#    game_screen.blit(score, (x, y))
 
 game_screen = pygame.display.set_mode((1280, 720))
 
@@ -437,7 +436,7 @@ for i in range(2,6):
 player_instance = Player()
 all_sprites.add(player_instance)
 
-opposition_instance = Opposition()
+
 
 #?Creation of database
 connection = sqlite3.connect('leaderboard_shmg.db')
