@@ -19,6 +19,7 @@ import leaderboard
 
 #?Setting up PyGame Clock
 mainClock = pygame.time.Clock()
+mainClock.tick(60)
 
 '''cars_to_avoid = {
     '1':pygame.image.load('greencar.png'),
@@ -57,6 +58,7 @@ y1 = -2500
 cars_passed = 0
 score = 0
 points = 0
+frames = 0
 
 #?Setting up a function, so that size of the font can differ
 def game_text(size):
@@ -156,6 +158,7 @@ def game_menu():
 def play():
     global y, x, y1, x1, score
     x_change = 0
+    frames = 0
     y2 =7
     avoid_car_speed = 0
     width, height = 1280, 720
@@ -167,6 +170,7 @@ def play():
     running = True
     while running:
         
+        frames += 1
         
         pause = True
         game_screen.blit(bg_game, (0,0))
@@ -187,18 +191,24 @@ def play():
         
         y1 += 5
         y += 5
-        
+    
         if not opposition_instance.alive():
             opposition_instance = Opposition()
+        
+        if frames%20 == 0:    
          
-        for i, inst in enumerate(e):
-            if inst.rect.y >= (height - 50):
-                score += 10
-                inst.kill()
-                opposition_instance = Opposition()
-                e.add(opposition_instance)   
-
-    
+            frames = 0
+         
+            for i, inst in enumerate(e):
+                if inst.rect.y >= (height - 50):
+                    score += 10
+                    inst.kill()
+                    opposition_instance = Opposition()
+                    e.add(opposition_instance)
+                all_sprites.draw(game_screen)
+                all_sprites.update()
+            
+                
         score_Text = game_text(20).render("Score: " + str(score), True, "White")
         game_screen.blit(score_Text, (50, 30))
     
@@ -210,9 +220,9 @@ def play():
             print("W")
             
         if y > 2500:
-            y = 2500
+            y = -2500
         if y1 > 2500:
-            y1 = 2500
+            y1 = -2500
         all_sprites.draw(game_screen)
         
         m_play = pygame.mouse.get_pos()
@@ -228,8 +238,8 @@ def play():
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                     if select_pause.checkForInput(m_play):
-                        pygame.mixer.music.fadeout(1000)
                         paused()
+                        pygame.mixer.music.fadeout(1000)
         pygame.display.flip()
         pygame.display.update()
 
@@ -239,7 +249,6 @@ def paused():
     pause = True
     while pause:
         
-            game_screen.blit(menu_background, (0, 0))
         
             m_pause = pygame.mouse.get_pos()
         
@@ -278,7 +287,7 @@ def paused():
                         pygame.mixer.music.fadeout(1000)
                         game_menu()
                         
-
+            all_sprites.draw(game_screen)
             pygame.display.update()
             
 score_value = 0
@@ -376,7 +385,7 @@ def instructions():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if return_menu.checkForInput(m_instructions):
                     game_menu()
-                    
+
         pygame.display.update()
 
 def leaderboards():
@@ -401,10 +410,10 @@ class Player(pygame.sprite.Sprite):
     def update(self):
         pos = pygame.mouse.get_pos()
         self.rect.x = pos[0]
-        if self.rect.x < 0:
-            self.rect.x = 0
-        if self.rect.x > 1000:
-            self.rect.x = 1000
+        if self.rect.x < 305:
+            self.rect.x = 305
+        if self.rect.x > 925:
+            self.rect.x = 925
             
             
 class Opposition(pygame.sprite.Sprite):
@@ -414,62 +423,47 @@ class Opposition(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = random.randrange(305, 980)
         self.rect.y = random.randrange(-100, -50)
-        self.speedy = random.randrange(6, 9)
         self.mask = pygame.mask.from_surface(self.image)
+        self.vel_x = random.randrange(-1, 1)
+        self.vel_y = random.randrange(1, 4)
         
     def update(self):
-        self.rect.y += self.speedy
-        if self.rect.y > 1000:
-            self.rect.x = random.randrange(305, 980)
-            self.rect.y = random.randrange(-100, -50)
-            self.speedy = random.randrange(6, 9)
+        self.rect.y += self.vel_y
         if self.rect.y > (height+50):
             opposition_instance.kill()
-
+        if self.rect.x <= 305:
+            self.rect.x = 305
+        if self.rect.x > 925:
+            self.rect.x = 925
+            
+            
+class OppositionSpawner:
+    def __init__(self):
+        self.opposition_group = pygame.sprite.Group()
+        self.spawn_timer = random.randrange(30, 120) #1/2 second to 2 seconds
+        
+    def update(self):
+        self.opposition_group.update()
+        if self.spawn_timer == 0:
+            self.spawn_opposition()
+            self.spawn_timer = random.randrange(30, 120)
+        else:
+            self.spawn_timer -= 1
+    
+    def spawn_opposition(self):
+        new_opposition = Opposition()
+        self.opposition_group.add(new_opposition)
+        
 all_sprites = pygame.sprite.Group()
 e = pygame.sprite.Group()
 
-for i in range(2,6):
+for i in range(6):
     opposition_instance = Opposition()
     e.add(opposition_instance)
     all_sprites.add(opposition_instance)
 player_instance = Player()
 all_sprites.add(player_instance)
 
-
-
-#?Creation of database
-connection = sqlite3.connect('leaderboard_shmg.db')
-c = connection.cursor()
-
-class Button():
-	def __init__(self, image, pos, text_input, font, base_color, hovering_color):
-		self.image = image
-		self.x_pos = pos[0]
-		self.y_pos = pos[1]
-		self.font = font
-		self.base_color, self.hovering_color = base_color, hovering_color
-		self.text_input = text_input
-		self.text = self.font.render(self.text_input, True, self.base_color)
-		if self.image is None:
-			self.image = self.text
-		self.rect = self.image.get_rect(center=(self.x_pos, self.y_pos))
-		self.text_rect = self.text.get_rect(center=(self.x_pos, self.y_pos))
-
-	def update(self, screen):
-		if self.image is not None:
-			screen.blit(self.image, self.rect)
-		screen.blit(self.text, self.text_rect)
-
-	def checkForInput(self, position):
-		if position[0] in range(self.rect.left, self.rect.right) and position[1] in range(self.rect.top, self.rect.bottom):
-			return True
-		return False
-
-	def changeColor(self, position):
-		if position[0] in range(self.rect.left, self.rect.right) and position[1] in range(self.rect.top, self.rect.bottom):
-			self.text = self.font.render(self.text_input, True, self.hovering_color)
-		else:
-			self.text = self.font.render(self.text_input, True, self.base_color)
+opposition_spawner = OppositionSpawner()
 
 game_menu()
